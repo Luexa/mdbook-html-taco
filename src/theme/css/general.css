@@ -141,3 +141,7 @@ blockquote {
 .tooltipped .tooltiptext {
     visibility: visible;
 }
+
+div .clear-both {
+    clear: both;
+}
