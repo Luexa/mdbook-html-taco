@@ -1,64 +1,65 @@
 #[macro_use]
-extern crate clap;
-#[macro_use]
 extern crate log;
 
 use chrono::Local;
-use clap::{App, AppSettings, ArgMatches};
+
 use env_logger::Builder;
+
 use log::LevelFilter;
-use mdbook::utils;
+
 use std::env;
-use std::ffi::OsStr;
-use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::io::{self, Write};
+use std::process;
 
-mod cmd;
+use toml::Value;
 
-const VERSION: &str = concat!("v", crate_version!());
+use mdbook_html_taco::{ROOT_PATH, PRINT_PATH, STRIP_INDEX};
+use mdbook_html_taco::errors::{Error, ErrorKind};
+use mdbook_html_taco::renderer::{HtmlHandlebars, RenderContext, Renderer};
 
 fn main() {
     init_logger();
 
-    // Create a list of valid arguments and sub-commands
-    let app = App::new(crate_name!())
-        .about(crate_description!())
-        .author("Mathieu David <mathieudavid@mathieudavid.org>")
-        .version(VERSION)
-        .setting(AppSettings::GlobalVersion)
-        .setting(AppSettings::ArgRequiredElseHelp)
-        .setting(AppSettings::ColoredHelp)
-        .after_help(
-            "For more information about a specific command, try `mdbook <command> --help`\n\
-             The source code for mdBook is available at: https://github.com/rust-lang-nursery/mdBook",
-        )
-        .subcommand(cmd::init::make_subcommand())
-        .subcommand(cmd::build::make_subcommand())
-        .subcommand(cmd::test::make_subcommand())
-        .subcommand(cmd::clean::make_subcommand());
+    if let Err(e) = execute() {
+        error!("{}", &e);
+        process::exit(1);
+    }
+}
 
-    #[cfg(feature = "watch")]
-    let app = app.subcommand(cmd::watch::make_subcommand());
-    #[cfg(feature = "serve")]
-    let app = app.subcommand(cmd::serve::make_subcommand());
+fn execute() -> Result<(), Error> {
+    let ctx = RenderContext::from_json(io::stdin())?;
 
-    // Check which subcomamnd the user ran...
-    let res = match app.get_matches().subcommand() {
-        ("init", Some(sub_matches)) => cmd::init::execute(sub_matches),
-        ("build", Some(sub_matches)) => cmd::build::execute(sub_matches),
-        ("clean", Some(sub_matches)) => cmd::clean::execute(sub_matches),
-        #[cfg(feature = "watch")]
-        ("watch", Some(sub_matches)) => cmd::watch::execute(sub_matches),
-        #[cfg(feature = "serve")]
-        ("serve", Some(sub_matches)) => cmd::serve::execute(sub_matches),
-        ("test", Some(sub_matches)) => cmd::test::execute(sub_matches),
-        (_, _) => unreachable!(),
-    };
+    if let Some(value) = ctx.config.get("output.html-taco.print-path") {
+        match value {
+            Value::String(value) => PRINT_PATH.set(value.into()).unwrap(),
+            _ => return Err(ErrorKind::Msg("Configuration property 'output.html-taco.print-path' should be a string".into()).into())
+        }
+    } else {
+        PRINT_PATH.set("print.md".into()).unwrap();
+    }
 
-    if let Err(e) = res {
-        utils::log_backtrace(&e);
+    if let Some(value) = ctx.config.get("output.html-taco.strip-index") {
+        match value {
+            Value::Boolean(value) => STRIP_INDEX.set(value.clone()).unwrap(),
+            _ => return Err(ErrorKind::Msg("Configuration property 'output.html-taco.strip-index' should be a boolean".into()).into())
+        }
+    } else {
+        STRIP_INDEX.set(false).unwrap();
+    }
 
-        std::process::exit(101);
+    if let Some(value) = ctx.config.get("output.html-taco.root-path") {
+        match value {
+            Value::String(value) => {
+                ROOT_PATH.set(value.into()).unwrap();
+
+                HtmlHandlebars::new().render(&ctx)
+            },
+            _ => {
+                Err(ErrorKind::Msg("Configuration property 'output.html-taco.root-path' should be a string".into()).into())
+            }
+        }
+    } else {
+        Err(ErrorKind::Msg("No absolute path root was configured".into()).into())
     }
 }
 
@@ -86,24 +87,4 @@ fn init_logger() {
     }
 
     builder.init();
-}
-
-fn get_book_dir(args: &ArgMatches) -> PathBuf {
-    if let Some(dir) = args.value_of("dir") {
-        // Check if path is relative from current dir, or absolute...
-        let p = Path::new(dir);
-        if p.is_relative() {
-            env::current_dir().unwrap().join(dir)
-        } else {
-            p.to_path_buf()
-        }
-    } else {
-        env::current_dir().expect("Unable to determine the current directory")
-    }
-}
-
-fn open<P: AsRef<OsStr>>(path: P) {
-    if let Err(e) = open::that(path) {
-        error!("Error opening web browser: {}", e);
-    }
 }

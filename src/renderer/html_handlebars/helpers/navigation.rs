@@ -3,7 +3,7 @@ use std::path::Path;
 
 use handlebars::{Context, Handlebars, Helper, Output, RenderContext, RenderError, Renderable};
 
-use crate::utils;
+//use crate::utils;
 
 type StringMap = BTreeMap<String, String>;
 
@@ -87,7 +87,7 @@ fn find_chapter(
 fn render(
     _h: &Helper<'_, '_>,
     r: &Handlebars,
-    ctx: &Context,
+    _ctx: &Context,
     rc: &mut RenderContext<'_>,
     out: &mut dyn Output,
     chapter: &StringMap,
@@ -95,15 +95,10 @@ fn render(
     trace!("Creating BTreeMap to inject in context");
 
     let mut context = BTreeMap::new();
-    let base_path = rc
-        .evaluate_absolute(ctx, "path", false)?
-        .as_str()
-        .ok_or_else(|| RenderError::new("Type error for `path`, string expected"))?
-        .replace("\"", "");
 
     context.insert(
         "path_to_root".to_owned(),
-        json!(utils::fs::path_to_root(&base_path)),
+        json!(crate::ROOT_PATH.get().unwrap()),
     );
 
     chapter
@@ -115,9 +110,18 @@ fn render(
         .get("path")
         .ok_or_else(|| RenderError::new("No path found for chapter in JSON data"))
         .and_then(|p| {
-            Path::new(p)
-                .with_extension("html")
-                .to_str()
+            let mut tmp = Path::new(p)
+                .with_extension("html");
+
+            if crate::STRIP_INDEX.get().unwrap().clone() {
+                if let Some(file_name) = tmp.file_name() {
+                    if file_name == "index.html" {
+                        tmp.set_file_name("");
+                    }
+                }
+            }
+
+            tmp.to_str()
                 .ok_or_else(|| RenderError::new("Link could not be converted to str"))
                 .map(|p| context.insert("link".to_owned(), json!(p.replace("\\", "/"))))
         })?;

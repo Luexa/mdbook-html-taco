@@ -98,6 +98,17 @@ extern crate serde_json;
 #[macro_use]
 extern crate pretty_assertions;
 
+use once_cell::sync::OnceCell;
+
+#[allow(missing_docs)]
+pub static ROOT_PATH: OnceCell<String> = OnceCell::new();
+
+#[allow(missing_docs)]
+pub static PRINT_PATH: OnceCell<String> = OnceCell::new();
+
+#[allow(missing_docs)]
+pub static STRIP_INDEX: OnceCell<bool> = OnceCell::new();
+
 pub mod book;
 pub mod config;
 pub mod preprocess;

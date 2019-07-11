@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use crate::utils;
+//use crate::utils;
 
 use handlebars::{Context, Handlebars, Helper, HelperDef, Output, RenderContext, RenderError};
 use pulldown_cmark::{html, Event, Parser};
@@ -78,15 +78,24 @@ impl HelperDef for RenderToc {
                 if !path.is_empty() {
                     out.write("<a href=\"")?;
 
-                    let tmp = Path::new(item.get("path").expect("Error: path should be Some(_)"))
-                        .with_extension("html")
+                    let mut tmp = Path::new(item.get("path").expect("Error: path should be Some(_)")).with_extension("html");
+
+                    if crate::STRIP_INDEX.get().unwrap().clone() {
+                        if let Some(file_name) = tmp.file_name() {
+                            if file_name == "index.html" {
+                                tmp.set_file_name("");
+                            }
+                        }
+                    }
+
+                    let tmp = tmp
                         .to_str()
                         .unwrap()
                         // Hack for windows who tends to use `\` as separator instead of `/`
                         .replace("\\", "/");
 
                     // Add link
-                    out.write(&utils::fs::path_to_root(&current))?;
+                    out.write(crate::ROOT_PATH.get().unwrap())?;
                     out.write(&tmp)?;
                     out.write("\"")?;
 

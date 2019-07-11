@@ -47,8 +47,8 @@ impl HtmlHandlebars {
                 .chain_err(|| "Could not convert path to str")?;
             let filepath = Path::new(&ch.path).with_extension("html");
 
-            // "print.html" is used for the print page.
-            if ch.path == Path::new("print.md") {
+            // Do not allow the print page to overlap with a chapter path
+            if ch.path == Path::new(crate::PRINT_PATH.get().unwrap()) {
                 bail!(ErrorKind::ReservedFilenameError(ch.path.clone()));
             };
 
@@ -69,7 +69,24 @@ impl HtmlHandlebars {
             ctx.data.insert("title".to_owned(), json!(title));
             ctx.data.insert(
                 "path_to_root".to_owned(),
-                json!(utils::fs::path_to_root(&ch.path)),
+                json!(crate::ROOT_PATH.get().unwrap()),
+            );
+            ctx.data.insert(
+                "print_path".to_owned(),
+                {
+                    let mut tmp = Path::new(crate::PRINT_PATH.get().unwrap())
+                        .with_extension("html");
+
+                    if crate::STRIP_INDEX.get().unwrap().clone() {
+                        if let Some(file_name) = tmp.file_name() {
+                            if file_name == "index.html" {
+                                tmp.set_file_name("");
+                            }
+                        }
+                    }
+
+                    json!(tmp.to_str().unwrap())
+                }
             );
 
             // Render the handlebars template with the data
@@ -84,7 +101,7 @@ impl HtmlHandlebars {
 
             if ctx.is_index {
                 ctx.data.insert("path".to_owned(), json!("index.md"));
-                ctx.data.insert("path_to_root".to_owned(), json!(""));
+                ctx.data.insert("path_to_root".to_owned(), json!(crate::ROOT_PATH.get().unwrap()));
                 let rendered_index = ctx.handlebars.render("index", &ctx.data)?;
                 let rendered_index = self.post_process(rendered_index, &ctx.html_config.playpen);
                 debug!("Creating index.html from {}", path);
@@ -194,11 +211,28 @@ impl HtmlHandlebars {
         // the last rendered chapter by removing it from its context
         data.remove("title");
         data.insert("is_print".to_owned(), json!(true));
-        data.insert("path".to_owned(), json!("print.md"));
+        data.insert("path".to_owned(), json!(crate::PRINT_PATH.get().unwrap()));
         data.insert("content".to_owned(), json!(print_content));
         data.insert(
             "path_to_root".to_owned(),
-            json!(utils::fs::path_to_root(Path::new("print.md"))),
+            json!(crate::ROOT_PATH.get().unwrap()),
+        );
+        data.insert(
+            "print_path".to_owned(),
+            {
+                let mut tmp = Path::new(crate::PRINT_PATH.get().unwrap())
+                    .with_extension("html");
+
+                if crate::STRIP_INDEX.get().unwrap().clone() {
+                    if let Some(file_name) = tmp.file_name() {
+                        if file_name == "index.html" {
+                            tmp.set_file_name("");
+                        }
+                    }
+                }
+
+                json!(tmp.to_str().unwrap())
+            }
         );
     }
 
@@ -344,7 +378,9 @@ impl Renderer for HtmlHandlebars {
 
         let rendered = self.post_process(rendered, &html_config.playpen);
 
-        utils::fs::write_file(&destination, "print.html", rendered.as_bytes())?;
+        let print_file = Path::new(crate::PRINT_PATH.get().unwrap()).with_extension("html");
+
+        utils::fs::write_file(&destination, &print_file, rendered.as_bytes())?;
         debug!("Creating print.html ✓");
 
         debug!("Copy static files");

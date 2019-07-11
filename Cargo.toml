@@ -1,23 +1,20 @@
 [package]
-name = "mdbook"
+name = "mdbook-html-taco"
 version = "0.3.0"
 authors = [
     "Mathieu David <mathieudavid@mathieudavid.org>",
     "Michael-F-Bryan <michaelfbryan@gmail.com>",
-    "Matt Ickstadt <mattico8@gmail.com>"
+    "Matt Ickstadt <mattico8@gmail.com>",
+    "Alluet <alluet@alluet.com>"
 ]
-documentation = "http://rust-lang-nursery.github.io/mdBook/index.html"
 edition = "2018"
-exclude = ["/book-example/*"]
-keywords = ["book", "gitbook", "rustbook", "markdown"]
 license = "MPL-2.0"
 readme = "README.md"
-repository = "https://github.com/rust-lang-nursery/mdBook"
-description = "Creates a book from markdown files"
+repository = "https://github.com/alluet/mdbook-html-taco"
+publish = false
 
 [dependencies]
 chrono = "0.4"
-clap = "2.24"
 env_logger = "0.6"
 error-chain = "0.12"
 handlebars = { version = "1.0", default-features = false, features = ["no_dir_source"] }
@@ -25,6 +22,7 @@ itertools = "0.8"
 lazy_static = "1.0"
 log = "0.4"
 memchr = "2.0"
+once_cell = "0.2"
 open = "1.1"
 pulldown-cmark = "0.5"
 regex = "1.0.0"
@@ -63,4 +61,4 @@ search = ["elasticlunr-rs", "ammonia"]
 
 [[bin]]
 doc = false
-name = "mdbook"
+name = "mdbook-html-taco"
