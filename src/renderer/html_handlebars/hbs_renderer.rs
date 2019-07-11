@@ -129,11 +129,17 @@ impl HtmlHandlebars {
     ) -> Result<()> {
         use crate::utils::fs::write_file;
 
-        write_file(
-            destination,
-            ".nojekyll",
-            b"This file makes sure that Github Pages doesn't process mdBook's output.",
-        )?;
+        write_file(destination, "site-root.js", format!(
+            "var path_to_root = \"{}\";\nvar default_theme = \"{}\";",
+            crate::ROOT_PATH.get().unwrap().replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n"),
+            match html_config.default_theme {
+                Some(ref theme) => theme,
+                None => "light",
+            }
+        ).as_bytes())?;
+
+        write_file(destination, "loading.js", theme::LOADING_JS)?;
+        write_file(destination, "init-sidebar.js", theme::INIT_SIDEBAR_JS)?;
 
         write_file(destination, "book.js", &theme.js)?;
         write_file(destination, "css/general.css", &theme.general_css)?;

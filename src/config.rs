@@ -168,7 +168,7 @@ impl Config {
     /// HTML renderer is refactored to be less coupled to `mdbook` internals.
     #[doc(hidden)]
     pub fn html_config(&self) -> Option<HtmlConfig> {
-        self.get_deserialized("output.html").ok()
+        self.get_deserialized("output.html-taco").ok()
     }
 
     /// Convenience function to fetch a value from the config and deserialize it

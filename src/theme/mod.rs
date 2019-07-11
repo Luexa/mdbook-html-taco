@@ -33,6 +33,9 @@ pub static FONT_AWESOME_WOFF2: &[u8] =
     include_bytes!("FontAwesome/fonts/fontawesome-webfont.woff2");
 pub static FONT_AWESOME_OTF: &[u8] = include_bytes!("FontAwesome/fonts/FontAwesome.otf");
 
+pub static LOADING_JS: &[u8] = include_bytes!("loading.js");
+pub static INIT_SIDEBAR_JS: &[u8] = include_bytes!("init-sidebar.js");
+
 /// The `Theme` struct should be used instead of the static variables because
 /// the `new()` method will look if the user has a theme directory in their
 /// source folder and use the users theme instead of the default.
